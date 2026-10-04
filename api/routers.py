@@ -1,0 +1,100 @@
+import io
+from pathlib import Path
+
+import pandas as pd
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from pydantic import BaseModel
+
+from agent.agent import run_analysis
+from agent.config import settings
+from agent.profiler import profile_dataframe
+from api.store import (
+    AnalysisRecord,
+    get_analysis,
+    get_dataset,
+    store_analysis,
+    store_dataset,
+)
+
+router = APIRouter()
+
+
+class AnalyzeRequest(BaseModel):
+    question: str
+
+
+def _profile_payload(profile) -> dict:
+    return {
+        "n_rows": profile.n_rows,
+        "n_cols": profile.n_cols,
+        "dup_rows": profile.dup_rows,
+        "missing_cells_pct": profile.missing_cells_pct,
+        "columns": [
+            {
+                "name": c.name,
+                "role": c.role,
+                "missing": c.missing,
+                "n_unique": c.n_unique,
+                "outliers": c.outliers,
+            }
+            for c in profile.columns
+        ],
+    }
+
+
+@router.post("/datasets", status_code=201)
+async def upload_dataset(file: UploadFile = File(...)):
+    raw = await file.read()
+    try:
+        df = pd.read_csv(io.BytesIO(raw))
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"cannot parse CSV: {exc}") from exc
+    if df.empty:
+        raise HTTPException(status_code=422, detail="empty CSV")
+    record = store_dataset(file.filename or "upload.csv", df, profile_dataframe(df))
+    return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
+
+
+@router.get("/datasets/{dataset_id}")
+async def get_dataset_profile(dataset_id: str):
+    record = get_dataset(dataset_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="dataset not found")
+    return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
+
+
+@router.post("/datasets/{dataset_id}/analyze")
+async def analyze_dataset(dataset_id: str, payload: AnalyzeRequest):
+    record = get_dataset(dataset_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="dataset not found")
+    artifacts_dir = str(Path(settings.artifacts_dir) / dataset_id)
+    ws = await run_analysis(record.df, payload.question, artifacts_dir=artifacts_dir)
+    analysis = AnalysisRecord(
+        question=payload.question,
+        report=ws.report_md,
+        steps=[{"tool": s.tool, "args": s.args, "summary": s.summary, "ok": s.ok} for s in ws.steps],
+        charts=list(ws.chart_files),
+    )
+    analysis_id = store_analysis(dataset_id, analysis)
+    return {
+        "analysis_id": analysis_id,
+        "dataset_id": dataset_id,
+        "charts": analysis.charts,
+        "steps": analysis.steps,
+        "report": analysis.report,
+    }
+
+
+@router.get("/datasets/{dataset_id}/analyses/{analysis_id}")
+async def get_analysis_result(dataset_id: str, analysis_id: str):
+    analysis = get_analysis(dataset_id, analysis_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="analysis not found")
+    return {
+        "analysis_id": analysis_id,
+        "question": analysis.question,
+        "charts": analysis.charts,
+        "steps": analysis.steps,
+        "report": analysis.report,
+    }

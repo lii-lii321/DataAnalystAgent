@@ -1,0 +1,12 @@
+{"id": "income_gender_gap", "dataset": "income.csv", "question": "男性和女性的 income 是否存在显著差异？", "expect": {"test_any": ["independent t-test", "mann-whitney u"], "significant": true, "report_contains": ["income"]}}
+{"id": "income_city", "dataset": "income.csv", "question": "不同 city 的 income 是否有明显差异？", "expect": {"test_any": ["one-way anova", "kruskal-wallis"], "significant": true}}
+{"id": "income_experience_corr", "dataset": "income.csv", "question": "experience 与 income 有什么关系？", "expect": {"test_any": ["pearson correlation", "spearman correlation"], "significant": true}}
+{"id": "income_dist", "dataset": "income.csv", "question": "分析 income 的分布", "expect": {"report_contains": ["histogram"]}}
+{"id": "income_predict", "dataset": "income.csv", "question": "预测 income（预测收入）", "expect": {"report_contains": ["r2"]}}
+{"id": "income_outliers", "dataset": "income.csv", "question": "income 数据中是否存在异常值？", "expect": {"report_contains": ["异常值"]}}
+{"id": "churn_predict", "dataset": "churn.csv", "question": "哪些因素影响 churn？预测 churn", "expect": {"report_contains": ["accuracy"]}}
+{"id": "churn_support", "dataset": "churn.csv", "question": "churn 与非 churn 客户的 support_calls 是否有显著差异？", "expect": {"test_any": ["independent t-test", "mann-whitney u"], "significant": true}}
+{"id": "churn_cluster", "dataset": "churn.csv", "question": "对客户进行分群 cluster", "expect": {"report_contains": ["silhouette"]}}
+{"id": "scores_corr", "dataset": "scores.csv", "question": "study_hours 与 score 的相关性如何？", "expect": {"test_any": ["pearson correlation", "spearman correlation"], "significant": true}}
+{"id": "scores_predict", "dataset": "scores.csv", "question": "预测 score（用学习时长）", "expect": {"report_contains": ["r2"]}}
+{"id": "income_quality", "dataset": "income.csv", "question": "检查 income 数据质量", "expect": {"report_contains": ["重复", "缺失"]}}
