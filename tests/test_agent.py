@@ -1,7 +1,28 @@
 import asyncio
 
 from agent.agent import run_analysis
+from agent.llm import LLMProvider
 from agent.synth import make_income
+
+
+class FakeProvider(LLMProvider):
+    name = "openai"
+
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.calls = 0
+
+    async def complete(self, system: str, user: str) -> str:
+        reply = self.replies[min(self.calls, len(self.replies) - 1)]
+        self.calls += 1
+        return reply
+
+
+class BoomProvider(LLMProvider):
+    name = "openai"
+
+    async def complete(self, system: str, user: str) -> str:
+        raise RuntimeError("LLM 服务不可用")
 
 
 def test_full_pipeline_on_income_data(tmp_path):
@@ -30,3 +51,45 @@ def test_prediction_pipeline(tmp_path):
     assert ws.model.task == "regression"
     assert ws.model.target == "income"
     assert "r2" in ws.report_md
+
+
+def test_llm_loop_executes_chosen_tools(tmp_path):
+    replies = [
+        '{"tool": "profile_data"}',
+        '{"tool": "check_quality"}',
+        '{"tool": "make_plot", "args": {"question": "分布 income"}}',
+        '{"tool": "finish"}',
+    ]
+    provider = FakeProvider(replies)
+    ws = asyncio.run(
+        run_analysis(make_income(), "income 分布如何？", provider=provider, artifacts_dir=str(tmp_path))
+    )
+    assert provider.calls == 4
+    executed = [s.tool for s in ws.steps if s.ok]
+    assert executed[:3] == ["profile_data", "check_quality", "make_plot"]
+    assert ws.report_md
+    assert "## 1. 数据概览" in ws.report_md
+
+
+def test_llm_failure_falls_back_to_pipeline(tmp_path):
+    ws = asyncio.run(
+        run_analysis(
+            make_income(),
+            "男性和女性的 income 是否存在显著差异？",
+            provider=BoomProvider(),
+            artifacts_dir=str(tmp_path),
+        )
+    )
+    assert ws.profile is not None
+    assert ws.tests, "fallback pipeline should run statistical tests"
+    assert "## 4. 统计检验" in ws.report_md
+
+
+def test_llm_unparseable_reply_stops_and_finalizes(tmp_path):
+    provider = FakeProvider(["抱歉，我无法决定下一步。"])
+    ws = asyncio.run(
+        run_analysis(make_income(), "income 分布如何？", provider=provider, artifacts_dir=str(tmp_path))
+    )
+    assert provider.calls == 1
+    assert ws.report_md
+    assert "分析报告" in ws.report_md

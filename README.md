@@ -112,7 +112,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             50 tests
+tests/             53 tests
 ```
 
 ## Testing
