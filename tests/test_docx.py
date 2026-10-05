@@ -37,3 +37,34 @@ def test_docx_renders_tables_and_headings(tmp_path):
     assert doc.tables[0].cell(1, 0).text == "t-test"
     bullets = [p.text for p in doc.paragraphs if p.style.name == "List Bullet"]
     assert bullets == ["发现一", "发现二"]
+
+
+def test_docx_strips_inline_markdown(tmp_path):
+    md = (
+        "# 报告\n\n"
+        "- **[high]** income：缺失 12 个值（建议：中位数填充）\n"
+        "- 任务：回归，目标列：`income`（train=800, test=200）\n\n"
+        "| 列 | 缺失 |\n"
+        "| --- | --- |\n"
+        "| **[medium]** age | 3 |\n"
+    )
+    out = tmp_path / "inline.docx"
+    markdown_to_docx(md, out)
+
+    from docx import Document
+
+    doc = Document(str(out))
+    joined = "\n".join(p.text for p in doc.paragraphs)
+    assert "*" not in joined
+    assert "`" not in joined
+
+    bold_runs = [run for p in doc.paragraphs for run in p.runs if run.bold]
+    assert bold_runs
+    assert any("[high]" in run.text for run in bold_runs)
+
+    mono_runs = [run for p in doc.paragraphs for run in p.runs if run.font.name == "Consolas"]
+    assert any(run.text == "income" for run in mono_runs)
+
+    cell_text = doc.tables[0].cell(1, 0).text
+    assert cell_text == "[medium] age"
+    assert "*" not in cell_text
