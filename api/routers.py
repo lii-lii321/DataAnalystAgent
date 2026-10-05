@@ -1,3 +1,4 @@
+import asyncio
 import io
 import re
 from pathlib import Path
@@ -8,7 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from agent import docx_export
-from agent.agent import run_analysis
+from agent.agent import run_analysis_sync
 from agent.config import settings
 from agent.profiler import profile_dataframe
 from agent.sql_source import load_table, validate_table
@@ -113,7 +114,7 @@ async def analyze_dataset(dataset_id: str, payload: AnalyzeRequest):
     if record is None:
         raise HTTPException(status_code=404, detail="dataset not found")
     artifacts_dir = str(Path(settings.artifacts_dir) / dataset_id)
-    ws = await run_analysis(record.df, payload.question, artifacts_dir=artifacts_dir)
+    ws = await asyncio.to_thread(run_analysis_sync, record.df, payload.question, None, artifacts_dir)
     analysis = AnalysisRecord(
         question=payload.question,
         report=ws.report_md,
