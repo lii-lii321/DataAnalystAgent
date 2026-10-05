@@ -3,11 +3,14 @@ from pathlib import Path
 
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from agent import docx_export
 from agent.agent import run_analysis
 from agent.config import settings
 from agent.profiler import profile_dataframe
+from api.jobs import get_job, start_job
 from api.store import (
     AnalysisRecord,
     get_analysis,
@@ -84,6 +87,40 @@ async def analyze_dataset(dataset_id: str, payload: AnalyzeRequest):
         "steps": analysis.steps,
         "report": analysis.report,
     }
+
+
+@router.post("/datasets/{dataset_id}/analyze/async", status_code=202)
+async def analyze_dataset_async(dataset_id: str, payload: AnalyzeRequest):
+    record = get_dataset(dataset_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="dataset not found")
+    artifacts_dir = str(Path(settings.artifacts_dir) / dataset_id)
+    job_id = start_job(dataset_id, record.df, payload.question, artifacts_dir)
+    return {"job_id": job_id, "status": "running"}
+
+
+@router.get("/jobs/{job_id}")
+async def job_status(job_id: str):
+    job = get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    return {"job_id": job_id, **job}
+
+
+@router.get("/datasets/{dataset_id}/analyses/{analysis_id}/report.docx")
+async def export_report_docx(dataset_id: str, analysis_id: str):
+    analysis = get_analysis(dataset_id, analysis_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="analysis not found")
+    out_dir = Path(settings.artifacts_dir) / dataset_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"report_{analysis_id}.docx"
+    docx_export.markdown_to_docx(analysis.report, out_path, image_dir=out_dir)
+    return FileResponse(
+        out_path,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=f"report_{analysis_id}.docx",
+    )
 
 
 @router.get("/datasets/{dataset_id}/analyses/{analysis_id}")

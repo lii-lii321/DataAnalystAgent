@@ -57,6 +57,14 @@ curl -F "file=@income.csv" http://127.0.0.1:8001/datasets
 curl -X POST http://127.0.0.1:8001/datasets/<id>/analyze \
      -H "Content-Type: application/json" \
      -d "{\"question\": \"男性和女性的 income 是否存在显著差异？\"}"
+
+# long-running analyses: async job + poll
+curl -X POST http://127.0.0.1:8001/datasets/<id>/analyze/async \
+     -H "Content-Type: application/json" -d "{\"question\": \"...\"}"
+curl http://127.0.0.1:8001/jobs/<job_id>
+
+# export a finished report as Word
+curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.docx
 ```
 
 Optional LLM mode (agent picks tools via any OpenAI-compatible API; the
@@ -109,6 +117,8 @@ tests/             33 tests
 - [x] Profiler, quality, stats engine, baseline ML, auto charts, report
 - [x] Tool-calling agent (mock + OpenAI-compatible)
 - [x] Analysis benchmark with planted ground truth
-- [ ] SQL/database sources, async job queue for long analyses
+- [x] Async analysis jobs (`analyze/async` + `/jobs/{id}` polling)
+- [x] Report export to Word (`report.docx`, charts embedded)
+- [ ] SQL/database sources, concurrent job workers
 - [ ] Human-in-the-loop hypothesis refinement
-- [ ] Report export to PDF/DOCX
+- [ ] PDF export (CJK font packaging)
