@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "gpt-4o-mini"
     artifacts_dir: str = "./artifacts"
+    max_upload_mb: float = 20.0
 
     model_config = {"env_prefix": "DAA_", "extra": "ignore"}
 

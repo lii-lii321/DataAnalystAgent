@@ -121,3 +121,17 @@ async def test_root_reports_app_metadata(client):
     assert body["app"] == "DataAnalystAgent"
     assert body["version"] == APP_VERSION
     assert body["docs"] == "/docs"
+
+
+async def test_upload_rejects_oversized_file(client, monkeypatch):
+    from agent.config import settings
+
+    monkeypatch.setattr(settings, "max_upload_mb", 0.001)
+    big_csv = ("a,b\n" + "1,2\n" * 1000).encode()
+    resp = await client.post("/datasets", files={"file": ("big.csv", big_csv, "text/csv")})
+    assert resp.status_code == 413
+    assert "too large" in resp.json()["detail"]
+
+    ok_csv = "a,b\n1,2\n".encode()
+    resp = await client.post("/datasets", files={"file": ("ok.csv", ok_csv, "text/csv")})
+    assert resp.status_code == 201

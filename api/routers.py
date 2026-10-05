@@ -58,7 +58,13 @@ def _profile_payload(profile) -> dict:
 
 @router.post("/datasets", status_code=201)
 async def upload_dataset(file: UploadFile = File(...)):
-    raw = await file.read()
+    limit_bytes = int(settings.max_upload_mb * 1024 * 1024)
+    raw = await file.read(limit_bytes + 1)
+    if len(raw) > limit_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"file too large (max {settings.max_upload_mb:g} MB)",
+        )
     try:
         df = pd.read_csv(io.BytesIO(raw))
     except Exception as exc:
