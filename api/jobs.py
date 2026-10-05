@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 
-from agent.agent import run_analysis
+from agent.agent import run_analysis_sync
 from api.store import AnalysisRecord, store_analysis
 
 JOBS: dict = {}
@@ -9,7 +9,7 @@ JOBS: dict = {}
 
 async def _execute(job_id: str, dataset_id: str, df, question: str, artifacts_dir: str) -> None:
     try:
-        ws = await run_analysis(df, question, artifacts_dir=artifacts_dir)
+        ws = await asyncio.to_thread(run_analysis_sync, df, question, None, artifacts_dir)
         analysis = AnalysisRecord(
             question=question,
             report=ws.report_md,

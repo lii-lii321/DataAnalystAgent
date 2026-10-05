@@ -10,6 +10,7 @@ from agent import docx_export
 from agent.agent import run_analysis
 from agent.config import settings
 from agent.profiler import profile_dataframe
+from agent.sql_source import load_table, validate_table
 from api.jobs import get_job, start_job
 from api.store import (
     AnalysisRecord,
@@ -24,6 +25,12 @@ router = APIRouter()
 
 class AnalyzeRequest(BaseModel):
     question: str
+
+
+class SqlSourceRequest(BaseModel):
+    url: str
+    table: str
+    limit: int = 10000
 
 
 def _profile_payload(profile) -> dict:
@@ -55,6 +62,24 @@ async def upload_dataset(file: UploadFile = File(...)):
     if df.empty:
         raise HTTPException(status_code=422, detail="empty CSV")
     record = store_dataset(file.filename or "upload.csv", df, profile_dataframe(df))
+    return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
+
+
+@router.post("/datasets/sql", status_code=201)
+async def import_sql_dataset(payload: SqlSourceRequest):
+    try:
+        validate_table(payload.table)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        df = load_table(payload.url, payload.table, payload.limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"cannot read table: {exc}") from exc
+    if df.empty:
+        raise HTTPException(status_code=422, detail="table is empty")
+    record = store_dataset(f"{payload.table} (SQL)", df, profile_dataframe(df))
     return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
 
 

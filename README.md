@@ -54,11 +54,17 @@ API (see /docs for interactive):
 
 ```bash
 curl -F "file=@income.csv" http://127.0.0.1:8001/datasets
+
+# import straight from a database table (read-only, identifier-whitelisted)
+curl -X POST http://127.0.0.1:8001/datasets/sql \
+     -H "Content-Type: application/json" \
+     -d "{\"url\": \"sqlite:///D:/data/demo.db\", \"table\": \"students\"}"
+
 curl -X POST http://127.0.0.1:8001/datasets/<id>/analyze \
      -H "Content-Type: application/json" \
      -d "{\"question\": \"男性和女性的 income 是否存在显著差异？\"}"
 
-# long-running analyses: async job + poll
+# long-running analyses: async job + poll (runs in a worker thread)
 curl -X POST http://127.0.0.1:8001/datasets/<id>/analyze/async \
      -H "Content-Type: application/json" -d "{\"question\": \"...\"}"
 curl http://127.0.0.1:8001/jobs/<job_id>
@@ -117,7 +123,8 @@ tests/             33 tests
 - [x] Profiler, quality, stats engine, baseline ML, auto charts, report
 - [x] Tool-calling agent (mock + OpenAI-compatible)
 - [x] Analysis benchmark with planted ground truth
-- [x] Async analysis jobs (`analyze/async` + `/jobs/{id}` polling)
+- [x] Async analysis jobs (`analyze/async` + `/jobs/{id}` polling, worker-thread execution)
+- [x] SQL table import (`/datasets/sql`, SQLite/MySQL/Postgres URLs, read-only)
 - [x] Report export to Word (`report.docx`, charts embedded)
 - [ ] SQL/database sources, concurrent job workers
 - [ ] Human-in-the-loop hypothesis refinement

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import re
 
@@ -95,3 +96,13 @@ async def run_analysis(
         fallback = tools.Workspace(df=ws.df, question=question)
         run_pipeline(fallback, artifacts_dir)
         return fallback
+
+
+def run_analysis_sync(
+    df,
+    question: str,
+    provider: LLMProvider | None = None,
+    artifacts_dir: str = "./artifacts",
+) -> tools.Workspace:
+    """Blocking wrapper so callers can offload analysis to a worker thread."""
+    return asyncio.run(run_analysis(df, question, provider=provider, artifacts_dir=artifacts_dir))
