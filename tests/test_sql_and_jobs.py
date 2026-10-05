@@ -61,6 +61,13 @@ async def test_sql_bad_url_400(client):
     assert resp.status_code in (400, 422)
 
 
+def test_sql_remote_dialect_drivers_available():
+    from sqlalchemy import create_engine
+
+    create_engine("mysql+pymysql://user:pw@127.0.0.1:3306/db")
+    create_engine("postgresql+psycopg2://user:pw@127.0.0.1:5432/db")
+
+
 async def test_concurrent_jobs_all_complete(client, tmp_path, monkeypatch):
     from agent.config import settings
     from agent.synth import make_income
