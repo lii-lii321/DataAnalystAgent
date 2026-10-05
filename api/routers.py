@@ -1,4 +1,5 @@
 import io
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -21,6 +22,8 @@ from api.store import (
 )
 
 router = APIRouter()
+
+CHART_FILENAME_RE = re.compile(r"^chart_\d+_[\w\-]+\.png$")
 
 
 class AnalyzeRequest(BaseModel):
@@ -89,6 +92,19 @@ async def get_dataset_profile(dataset_id: str):
     if record is None:
         raise HTTPException(status_code=404, detail="dataset not found")
     return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
+
+
+@router.get("/datasets/{dataset_id}/charts/{filename}")
+async def download_chart(dataset_id: str, filename: str):
+    if not CHART_FILENAME_RE.fullmatch(filename):
+        raise HTTPException(status_code=404, detail="chart not found")
+    if Path(dataset_id).name != dataset_id:
+        raise HTTPException(status_code=404, detail="chart not found")
+    base_dir = (Path(settings.artifacts_dir) / dataset_id).resolve()
+    chart_path = (base_dir / filename).resolve()
+    if base_dir not in chart_path.parents or not chart_path.is_file():
+        raise HTTPException(status_code=404, detail="chart not found")
+    return FileResponse(chart_path, media_type="image/png", filename=filename)
 
 
 @router.post("/datasets/{dataset_id}/analyze")
