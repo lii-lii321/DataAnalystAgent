@@ -69,6 +69,9 @@ curl -X POST http://127.0.0.1:8001/datasets/<id>/analyze/async \
      -H "Content-Type: application/json" -d "{\"question\": \"...\"}"
 curl http://127.0.0.1:8001/jobs/<job_id>
 
+# fetch a generated chart (filename as returned in the analyze response)
+curl -O -J http://127.0.0.1:8001/datasets/<id>/charts/<chart_file>.png
+
 # export a finished report as Word
 curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.docx
 ```
@@ -107,9 +110,9 @@ agent/
 ├── agent.py       heuristic pipeline / LLM tool-calling loop
 ├── synth.py       deterministic benchmark data with planted effects
 └── llm.py         mock | OpenAI-compatible provider
-api/               FastAPI: upload → profile → analyze → report
+api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             33 tests
+tests/             50 tests
 ```
 
 ## Testing
@@ -125,7 +128,7 @@ tests/             33 tests
 - [x] Analysis benchmark with planted ground truth
 - [x] Async analysis jobs (`analyze/async` + `/jobs/{id}` polling, worker-thread execution)
 - [x] SQL table import (`/datasets/sql`, SQLite/MySQL/Postgres URLs, read-only)
-- [x] Report export to Word (`report.docx`, charts embedded)
-- [ ] SQL/database sources, concurrent job workers
+- [x] Report export to Word (`report.docx`, charts embedded, inline Markdown stripped)
+- [x] Chart download endpoint (`/datasets/{id}/charts/{filename}`), hardened job lifecycle
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)

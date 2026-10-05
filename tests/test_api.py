@@ -104,3 +104,20 @@ async def test_full_analysis_flow(client, tmp_path, monkeypatch):
 async def test_analyze_missing_dataset(client):
     resp = await client.post("/datasets/doesnotexist/analyze", json={"question": "test"})
     assert resp.status_code == 404
+
+
+async def test_healthz(client):
+    resp = await client.get("/healthz")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+
+async def test_root_reports_app_metadata(client):
+    from main import APP_VERSION
+
+    resp = await client.get("/")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["app"] == "DataAnalystAgent"
+    assert body["version"] == APP_VERSION
+    assert body["docs"] == "/docs"

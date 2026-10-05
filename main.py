@@ -6,12 +6,15 @@ from api.routers import router
 from fastapi import FastAPI
 
 
+APP_VERSION = "0.3.0"
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title=settings.app_name, version="0.3.0")
+app = FastAPI(title=settings.app_name, version=APP_VERSION)
 app.include_router(router)
 
 
@@ -22,4 +25,4 @@ async def healthz():
 
 @app.get("/")
 async def root():
-    return {"app": settings.app_name, "version": "0.1.0", "docs": "/docs"}
+    return {"app": settings.app_name, "version": APP_VERSION, "docs": "/docs"}
