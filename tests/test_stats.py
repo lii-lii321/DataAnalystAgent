@@ -61,3 +61,33 @@ def test_correlation_strong_linear():
     assert "correlation" in result.test
     assert result.significant
     assert abs(result.effect) > 0.9
+
+
+def test_small_samples_use_mann_whitney_without_normality():
+    df = pd.DataFrame({
+        "value": [1.0, 2.0, 3.0, 4.0, 5.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+        "group": ["a"] * 5 + ["b"] * 5,
+    })
+    result = compare_groups(df, "value", "group")
+    assert result.test == "mann-whitney U"
+    assert "样本量过小" in result.detail
+    assert 0.0 <= result.p_value <= 1.0
+
+
+def test_correlation_uses_spearman_for_non_normal_data():
+    df = pd.DataFrame({"x": np.arange(200, dtype=float), "y": np.arange(200, dtype=float) ** 2})
+    result = correlation(df, "x", "y")
+    assert result.test == "spearman correlation"
+    assert result.significant
+
+
+def test_correlation_needs_three_pairs():
+    df = pd.DataFrame({"x": [1.0, 2.0], "y": [1.0, 4.0]})
+    with pytest.raises(ValueError):
+        correlation(df, "x", "y")
+
+
+def test_association_needs_two_levels_each():
+    df = pd.DataFrame({"a": ["x"] * 10, "b": ["p", "q"] * 5})
+    with pytest.raises(ValueError):
+        categorical_association(df, "a", "b")
