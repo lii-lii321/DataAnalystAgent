@@ -53,6 +53,19 @@ def test_prediction_pipeline(tmp_path):
     assert "r2" in ws.report_md
 
 
+def test_cluster_pipeline_reports_clusters(tmp_path):
+    df = make_income()
+    ws = asyncio.run(run_analysis(
+        df,
+        "对 income 和 experience 做聚类分析",
+        artifacts_dir=str(tmp_path),
+    ))
+    assert ws.cluster is not None
+    assert ws.cluster.k >= 2
+    assert "## 7. 聚类分析" in ws.report_md
+    assert "最优 k=" in ws.report_md
+
+
 def test_llm_loop_executes_chosen_tools(tmp_path):
     replies = [
         '{"tool": "profile_data"}',
