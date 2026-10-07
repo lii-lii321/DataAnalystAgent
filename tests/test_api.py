@@ -265,6 +265,33 @@ async def test_healthz(client):
     assert resp.json()["status"] == "ok"
 
 
+async def test_healthz_reports_load_counters(client):
+    from api import jobs as jobs_mod
+    from api.store import REGISTRY
+    from main import APP_VERSION
+
+    jobs_mod.JOBS.clear()
+    before = len(REGISTRY)
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("income.csv", CSV_TEXT.encode(), "text/csv")},
+    )
+    assert upload.status_code == 201
+
+    body = (await client.get("/healthz")).json()
+    assert body["status"] == "ok"
+    assert body["version"] == APP_VERSION
+    assert body["datasets"] == before + 1
+    assert body["jobs_running"] == 0
+    assert body["jobs_total"] == 0
+
+    jobs_mod.JOBS["probejob0001"] = {"status": "running", "created_at": 0.0}
+    body = (await client.get("/healthz")).json()
+    assert body["jobs_running"] == 1
+    assert body["jobs_total"] == 1
+    jobs_mod.JOBS.clear()
+
+
 async def test_root_reports_app_metadata(client):
     from main import APP_VERSION
 
