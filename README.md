@@ -92,6 +92,27 @@ curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.docx
 curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.md
 ```
 
+### API endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/datasets` | Upload a CSV, get id + profile back |
+| POST | `/datasets/sql` | Import a database table (url/table, `limit` 1..100000) |
+| GET | `/datasets` | List uploaded datasets (summaries) |
+| GET | `/datasets/{id}` | One dataset's profile |
+| GET | `/datasets/{id}/data?rows=N` | Preview raw rows (default 20, capped at 500) |
+| DELETE | `/datasets/{id}` | Drop the dataset record and its artifacts directory |
+| POST | `/datasets/{id}/analyze` | Run an analysis synchronously (worker thread) |
+| POST | `/datasets/{id}/analyze/async` | Start an async analysis job, returns job_id |
+| GET | `/jobs` | List job summaries (oldest first) |
+| GET | `/jobs/{job_id}` | One job's status / full result |
+| GET | `/datasets/{id}/analyses` | Analysis history (oldest first) |
+| GET | `/datasets/{id}/analyses/{aid}` | One analysis result (report text included) |
+| GET | `/datasets/{id}/analyses/{aid}/report.md` | Download the report as Markdown |
+| GET | `/datasets/{id}/analyses/{aid}/report.docx` | Download the report as Word |
+| GET | `/datasets/{id}/charts/{filename}` | Download a generated chart PNG |
+| GET | `/healthz`, `/` | Liveness probe / app info |
+
 Optional LLM mode (agent picks tools via any OpenAI-compatible API; the
 heuristic pipeline remains the fallback):
 
