@@ -72,6 +72,10 @@ curl http://127.0.0.1:8001/jobs/<job_id>
 # fetch a generated chart (filename as returned in the analyze response)
 curl -O -J http://127.0.0.1:8001/datasets/<id>/charts/<chart_file>.png
 
+# list uploaded datasets / list a dataset's analysis history (oldest first)
+curl http://127.0.0.1:8001/datasets
+curl http://127.0.0.1:8001/datasets/<id>/analyses
+
 # export a finished report as Word
 curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.docx
 ```
@@ -112,7 +116,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             55 tests
+tests/             59 tests
 ```
 
 ## Testing
@@ -130,5 +134,6 @@ tests/             55 tests
 - [x] SQL table import (`/datasets/sql`, SQLite/MySQL/Postgres URLs, read-only)
 - [x] Report export to Word (`report.docx`, charts embedded, inline Markdown stripped)
 - [x] Chart download endpoint (`/datasets/{id}/charts/{filename}`), hardened job lifecycle
+- [x] Listing endpoints (`GET /datasets`, `GET /datasets/{id}/analyses` — analysis history, oldest first)
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)

@@ -106,6 +106,72 @@ async def test_analyze_missing_dataset(client):
     assert resp.status_code == 404
 
 
+async def test_list_datasets(client):
+    resp = await client.get("/datasets")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+    for name in ("one.csv", "two.csv"):
+        upload = await client.post(
+            "/datasets",
+            files={"file": (name, CSV_TEXT.encode(), "text/csv")},
+        )
+        assert upload.status_code == 201
+
+    body = (await client.get("/datasets")).json()
+    assert [item["filename"] for item in body] == ["one.csv", "two.csv"]
+    assert body[0]["n_rows"] == 4
+    assert body[0]["n_cols"] == 3
+
+
+async def test_list_analyses_empty_for_fresh_dataset(client):
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("income.csv", CSV_TEXT.encode(), "text/csv")},
+    )
+    dataset_id = upload.json()["id"]
+    resp = await client.get(f"/datasets/{dataset_id}/analyses")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+async def test_list_analyses_returns_history_in_order(client, tmp_path, monkeypatch):
+    from agent.config import settings
+
+    monkeypatch.setattr(settings, "artifacts_dir", str(tmp_path))
+    csv = make_income().to_csv(index=False)
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("income.csv", csv.encode(), "text/csv")},
+    )
+    dataset_id = upload.json()["id"]
+
+    questions = ["男性和女性的 income 是否存在显著差异？", "income 在不同 city 间是否有差异？"]
+    first_charts = None
+    for question in questions:
+        analyze = await client.post(f"/datasets/{dataset_id}/analyze", json={"question": question})
+        assert analyze.status_code == 200
+        if first_charts is None:
+            first_charts = analyze.json()["charts"]
+
+    listing = await client.get(f"/datasets/{dataset_id}/analyses")
+    assert listing.status_code == 200
+    items = listing.json()
+    assert [item["question"] for item in items] == questions
+    assert [item["created_at"] for item in items] == sorted(item["created_at"] for item in items)
+    assert items[0]["n_steps"] > 0
+    assert items[0]["n_charts"] == len(first_charts)
+    assert items[0]["charts"] == first_charts
+
+    detail = await client.get(f"/datasets/{dataset_id}/analyses/{items[0]['analysis_id']}")
+    assert detail.status_code == 200
+
+
+async def test_list_analyses_missing_dataset_404(client):
+    resp = await client.get("/datasets/doesnotexist/analyses")
+    assert resp.status_code == 404
+
+
 async def test_healthz(client):
     resp = await client.get("/healthz")
     assert resp.status_code == 200

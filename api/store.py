@@ -1,3 +1,4 @@
+import time
 import uuid
 from dataclasses import dataclass, field
 
@@ -12,6 +13,7 @@ class AnalysisRecord:
     report: str
     steps: list
     charts: list
+    created_at: float = field(default_factory=time.time)
 
 
 @dataclass
@@ -45,6 +47,17 @@ def store_analysis(dataset_id: str, analysis: AnalysisRecord) -> str:
 
 def get_dataset(dataset_id: str) -> DatasetRecord | None:
     return REGISTRY.get(dataset_id)
+
+
+def list_datasets() -> list[DatasetRecord]:
+    return list(REGISTRY.values())
+
+
+def list_analyses(dataset_id: str) -> list[tuple[str, AnalysisRecord]] | None:
+    record = REGISTRY.get(dataset_id)
+    if record is None:
+        return None
+    return sorted(record.analyses.items(), key=lambda kv: kv[1].created_at)
 
 
 def get_analysis(dataset_id: str, analysis_id: str) -> AnalysisRecord | None:

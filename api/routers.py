@@ -18,6 +18,8 @@ from api.store import (
     AnalysisRecord,
     get_analysis,
     get_dataset,
+    list_analyses,
+    list_datasets,
     store_analysis,
     store_dataset,
 )
@@ -93,12 +95,43 @@ async def import_sql_dataset(payload: SqlSourceRequest):
     return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
 
 
+@router.get("/datasets")
+async def list_all_datasets():
+    return [
+        {
+            "id": record.id,
+            "filename": record.filename,
+            "n_rows": record.profile.n_rows,
+            "n_cols": record.profile.n_cols,
+        }
+        for record in list_datasets()
+    ]
+
+
 @router.get("/datasets/{dataset_id}")
 async def get_dataset_profile(dataset_id: str):
     record = get_dataset(dataset_id)
     if record is None:
         raise HTTPException(status_code=404, detail="dataset not found")
     return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
+
+
+@router.get("/datasets/{dataset_id}/analyses")
+async def list_dataset_analyses(dataset_id: str):
+    items = list_analyses(dataset_id)
+    if items is None:
+        raise HTTPException(status_code=404, detail="dataset not found")
+    return [
+        {
+            "analysis_id": analysis_id,
+            "question": analysis.question,
+            "n_steps": len(analysis.steps),
+            "n_charts": len(analysis.charts),
+            "charts": list(analysis.charts),
+            "created_at": analysis.created_at,
+        }
+        for analysis_id, analysis in items
+    ]
 
 
 @router.get("/datasets/{dataset_id}/charts/{filename}")
