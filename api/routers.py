@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
@@ -280,7 +280,20 @@ async def get_analysis_result(dataset_id: str, analysis_id: str):
     return {
         "analysis_id": analysis_id,
         "question": analysis.question,
+        "created_at": analysis.created_at,
         "charts": analysis.charts,
         "steps": analysis.steps,
         "report": analysis.report,
     }
+
+
+@router.get("/datasets/{dataset_id}/analyses/{analysis_id}/report.md")
+async def export_report_markdown(dataset_id: str, analysis_id: str):
+    analysis = get_analysis(dataset_id, analysis_id)
+    if analysis is None:
+        raise HTTPException(status_code=404, detail="analysis not found")
+    return Response(
+        content=analysis.report,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="report_{analysis_id}.md"'},
+    )

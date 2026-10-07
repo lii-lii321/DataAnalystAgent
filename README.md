@@ -87,6 +87,9 @@ curl -X DELETE http://127.0.0.1:8001/datasets/<id>
 
 # export a finished report as Word
 curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.docx
+
+# or grab the canonical Markdown report directly
+curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.md
 ```
 
 Optional LLM mode (agent picks tools via any OpenAI-compatible API; the
@@ -125,7 +128,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             68 tests
+tests/             70 tests
 ```
 
 ## Testing
@@ -148,5 +151,6 @@ tests/             68 tests
 - [x] Data preview (`GET /datasets/{id}/data?rows=N` — raw rows, JSON-safe nulls)
 - [x] SQL import `limit` bounded (`1..100000`, bound as a query parameter)
 - [x] Job listing (`GET /jobs` — summaries oldest first, jobs tagged with `dataset_id`)
+- [x] Raw Markdown report download (`report.md`), analysis detail carries `created_at`
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)

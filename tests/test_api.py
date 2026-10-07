@@ -100,10 +100,28 @@ async def test_full_analysis_flow(client, tmp_path, monkeypatch):
     fetched = await client.get(f"/datasets/{dataset_id}/analyses/{body['analysis_id']}")
     assert fetched.status_code == 200
     assert fetched.json()["question"].startswith("男性和女性")
+    assert fetched.json()["created_at"] > 0
 
 
 async def test_analyze_missing_dataset(client):
     resp = await client.post("/datasets/doesnotexist/analyze", json={"question": "test"})
+    assert resp.status_code == 404
+
+
+async def test_export_report_markdown(client, tmp_path, monkeypatch):
+    dataset_id, body = await _upload_and_analyze_income(client, monkeypatch, tmp_path)
+
+    resp = await client.get(f"/datasets/{dataset_id}/analyses/{body['analysis_id']}/report.md")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/markdown")
+    assert "attachment" in resp.headers["content-disposition"]
+    assert f"report_{body['analysis_id']}.md" in resp.headers["content-disposition"]
+    assert resp.text == body["report"]
+    assert "统计检验" in resp.text
+
+
+async def test_export_report_markdown_missing_404(client):
+    resp = await client.get("/datasets/abc/analyses/xyz/report.md")
     assert resp.status_code == 404
 
 
