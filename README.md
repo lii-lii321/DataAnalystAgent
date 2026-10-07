@@ -69,6 +69,9 @@ curl -X POST http://127.0.0.1:8001/datasets/<id>/analyze/async \
      -H "Content-Type: application/json" -d "{\"question\": \"...\"}"
 curl http://127.0.0.1:8001/jobs/<job_id>
 
+# list all jobs (summaries, oldest first; full payload via /jobs/<job_id>)
+curl http://127.0.0.1:8001/jobs
+
 # fetch a generated chart (filename as returned in the analyze response)
 curl -O -J http://127.0.0.1:8001/datasets/<id>/charts/<chart_file>.png
 
@@ -122,7 +125,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             66 tests
+tests/             68 tests
 ```
 
 ## Testing
@@ -144,5 +147,6 @@ tests/             66 tests
 - [x] Dataset deletion (`DELETE /datasets/{id}` — frees registry entry and artifacts directory)
 - [x] Data preview (`GET /datasets/{id}/data?rows=N` — raw rows, JSON-safe nulls)
 - [x] SQL import `limit` bounded (`1..100000`, bound as a query parameter)
+- [x] Job listing (`GET /jobs` — summaries oldest first, jobs tagged with `dataset_id`)
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)

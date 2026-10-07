@@ -16,7 +16,7 @@ from agent.agent import run_analysis_sync
 from agent.config import settings
 from agent.profiler import profile_dataframe
 from agent.sql_source import load_table, validate_table
-from api.jobs import get_job, start_job
+from api.jobs import get_job, list_jobs, start_job
 from api.store import (
     AnalysisRecord,
     delete_dataset,
@@ -228,6 +228,24 @@ async def analyze_dataset_async(dataset_id: str, payload: AnalyzeRequest):
     artifacts_dir = str(Path(settings.artifacts_dir) / dataset_id)
     job_id = start_job(dataset_id, record.df, payload.question, artifacts_dir)
     return {"job_id": job_id, "status": "running"}
+
+
+@router.get("/jobs")
+async def list_all_jobs():
+    summaries = []
+    for job_id, job in list_jobs():
+        summary = {
+            "job_id": job_id,
+            "status": job.get("status"),
+            "dataset_id": job.get("dataset_id"),
+            "created_at": job.get("created_at"),
+        }
+        if "analysis_id" in job:
+            summary["analysis_id"] = job["analysis_id"]
+        if "error" in job:
+            summary["error"] = job["error"]
+        summaries.append(summary)
+    return summaries
 
 
 @router.get("/jobs/{job_id}")
