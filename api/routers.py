@@ -1,6 +1,7 @@
 import asyncio
 import io
 import re
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -16,6 +17,7 @@ from agent.sql_source import load_table, validate_table
 from api.jobs import get_job, start_job
 from api.store import (
     AnalysisRecord,
+    delete_dataset,
     get_analysis,
     get_dataset,
     list_analyses,
@@ -114,6 +116,18 @@ async def get_dataset_profile(dataset_id: str):
     if record is None:
         raise HTTPException(status_code=404, detail="dataset not found")
     return {"id": record.id, "filename": record.filename, "profile": _profile_payload(record.profile)}
+
+
+@router.delete("/datasets/{dataset_id}")
+async def remove_dataset(dataset_id: str):
+    if not delete_dataset(dataset_id):
+        raise HTTPException(status_code=404, detail="dataset not found")
+    if Path(dataset_id).name == dataset_id:
+        base_dir = Path(settings.artifacts_dir)
+        artifacts = (base_dir / dataset_id).resolve()
+        if artifacts.parent == base_dir.resolve():
+            shutil.rmtree(artifacts, ignore_errors=True)
+    return {"deleted": dataset_id}
 
 
 @router.get("/datasets/{dataset_id}/analyses")

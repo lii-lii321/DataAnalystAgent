@@ -172,6 +172,36 @@ async def test_list_analyses_missing_dataset_404(client):
     assert resp.status_code == 404
 
 
+async def test_delete_dataset_removes_record(client):
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("income.csv", CSV_TEXT.encode(), "text/csv")},
+    )
+    dataset_id = upload.json()["id"]
+
+    resp = await client.delete(f"/datasets/{dataset_id}")
+    assert resp.status_code == 200
+    assert resp.json() == {"deleted": dataset_id}
+
+    assert (await client.get(f"/datasets/{dataset_id}")).status_code == 404
+    assert (await client.get("/datasets")).json() == []
+    assert (await client.delete(f"/datasets/{dataset_id}")).status_code == 404
+
+
+async def test_delete_dataset_removes_artifacts(client, tmp_path, monkeypatch):
+    from agent.config import settings
+
+    monkeypatch.setattr(settings, "artifacts_dir", str(tmp_path))
+    dataset_id, body = await _upload_and_analyze_income(client, monkeypatch, tmp_path)
+    chart = body["charts"][0]
+
+    resp = await client.delete(f"/datasets/{dataset_id}")
+    assert resp.status_code == 200
+    assert not (tmp_path / dataset_id).exists()
+    assert (await client.get(f"/datasets/{dataset_id}/charts/{chart}")).status_code == 404
+    assert (await client.get(f"/datasets/{dataset_id}/analyses")).status_code == 404
+
+
 async def test_healthz(client):
     resp = await client.get("/healthz")
     assert resp.status_code == 200

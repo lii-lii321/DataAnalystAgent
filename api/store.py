@@ -49,6 +49,10 @@ def get_dataset(dataset_id: str) -> DatasetRecord | None:
     return REGISTRY.get(dataset_id)
 
 
+def delete_dataset(dataset_id: str) -> bool:
+    return REGISTRY.pop(dataset_id, None) is not None
+
+
 def list_datasets() -> list[DatasetRecord]:
     return list(REGISTRY.values())
 

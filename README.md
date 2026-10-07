@@ -76,6 +76,9 @@ curl -O -J http://127.0.0.1:8001/datasets/<id>/charts/<chart_file>.png
 curl http://127.0.0.1:8001/datasets
 curl http://127.0.0.1:8001/datasets/<id>/analyses
 
+# release a dataset: drops the in-memory record and its artifacts directory
+curl -X DELETE http://127.0.0.1:8001/datasets/<id>
+
 # export a finished report as Word
 curl -O -J http://127.0.0.1:8001/datasets/<id>/analyses/<aid>/report.docx
 ```
@@ -116,7 +119,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             59 tests
+tests/             61 tests
 ```
 
 ## Testing
@@ -135,5 +138,6 @@ tests/             59 tests
 - [x] Report export to Word (`report.docx`, charts embedded, inline Markdown stripped)
 - [x] Chart download endpoint (`/datasets/{id}/charts/{filename}`), hardened job lifecycle
 - [x] Listing endpoints (`GET /datasets`, `GET /datasets/{id}/analyses` — analysis history, oldest first)
+- [x] Dataset deletion (`DELETE /datasets/{id}` — frees registry entry and artifacts directory)
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)
