@@ -48,3 +48,16 @@ def test_binary_numeric_is_categorical():
     profile = profile_dataframe(df)
     assert profile.column("churn").role == "categorical"
     assert profile.column("fee").role == "numeric"
+
+
+def test_empty_column_role_is_empty():
+    df = pd.DataFrame({"blank": [None] * 5, "v": [1.0, 2.0, 3.0, 4.0, 5.0]})
+    profile = profile_dataframe(df)
+    assert profile.column("blank").role == "empty"
+    assert infer_role(df["blank"]) == "empty"
+
+
+def test_free_text_column_role_is_text():
+    phrases = [f"备注{i % 40}号记录" for i in range(100)]
+    df = pd.DataFrame({"note": phrases})
+    assert infer_role(df["note"]) == "text"

@@ -56,3 +56,9 @@ def test_kmeans_finds_two_clusters():
     assert result.k == 2
     assert result.silhouette > 0.6
     assert sum(result.sizes.values()) == 200
+
+
+def test_kmeans_needs_ten_rows():
+    df = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]})
+    with pytest.raises(ValueError):
+        kmeans_profile(df, ["a"])
