@@ -108,6 +108,42 @@ async def test_analyze_missing_dataset(client):
     assert resp.status_code == 404
 
 
+async def test_analyze_rejects_blank_question(client):
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("income.csv", CSV_TEXT.encode(), "text/csv")},
+    )
+    dataset_id = upload.json()["id"]
+    for question in ("", "   \n\t "):
+        resp = await client.post(f"/datasets/{dataset_id}/analyze", json={"question": question})
+        assert resp.status_code == 422, repr(question)
+    resp = await client.post(f"/datasets/{dataset_id}/analyze/async", json={"question": ""})
+    assert resp.status_code == 422
+
+
+async def test_analyze_caps_question_length(client, tmp_path, monkeypatch):
+    from agent.config import settings
+
+    monkeypatch.setattr(settings, "artifacts_dir", str(tmp_path))
+    csv = make_income().to_csv(index=False)
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("income.csv", csv.encode(), "text/csv")},
+    )
+    dataset_id = upload.json()["id"]
+
+    resp = await client.post(f"/datasets/{dataset_id}/analyze", json={"question": "问" * 2001})
+    assert resp.status_code == 422
+
+    resp = await client.post(f"/datasets/{dataset_id}/analyze", json={"question": "问" * 2000})
+    assert resp.status_code == 200
+    assert resp.json()["question"] == "问" * 2000
+
+    resp = await client.post(f"/datasets/{dataset_id}/analyze", json={"question": "  income 差异如何？  "})
+    assert resp.status_code == 200
+    assert resp.json()["question"] == "income 差异如何？"
+
+
 async def test_export_report_markdown(client, tmp_path, monkeypatch):
     dataset_id, body = await _upload_and_analyze_income(client, monkeypatch, tmp_path)
 

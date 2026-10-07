@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from agent import docx_export
 from agent.agent import run_analysis_sync
@@ -48,8 +48,19 @@ def _json_safe(value):
     return value
 
 
+QUESTION_MAX_CHARS = 2000
+
+
 class AnalyzeRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1, max_length=QUESTION_MAX_CHARS)
+
+    @field_validator("question")
+    @classmethod
+    def _question_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("question must not be blank")
+        return stripped
 
 
 class SqlSourceRequest(BaseModel):
@@ -214,6 +225,7 @@ async def analyze_dataset(dataset_id: str, payload: AnalyzeRequest):
     return {
         "analysis_id": analysis_id,
         "dataset_id": dataset_id,
+        "question": analysis.question,
         "charts": analysis.charts,
         "steps": analysis.steps,
         "report": analysis.report,

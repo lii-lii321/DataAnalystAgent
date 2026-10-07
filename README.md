@@ -149,7 +149,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             72 tests
+tests/             74 tests
 ```
 
 ## Testing
@@ -175,5 +175,6 @@ tests/             72 tests
 - [x] Raw Markdown report download (`report.md`), analysis detail carries `created_at`
 - [x] Job retention never evicts running jobs (prune skips `status=running`)
 - [x] `/healthz` reports version + dataset/job load counters
+- [x] `question` bounded (1..2000 chars, blank rejected, trimmed; sync analyze echoes `question` like async)
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)
