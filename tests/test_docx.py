@@ -22,6 +22,20 @@ def test_markdown_report_to_docx_with_charts(tmp_path):
     assert len(data) > 5000
 
 
+def test_docx_skips_missing_chart_file(tmp_path):
+    md = "# 报告\n\n![chart_1.png](chart_1.png)\n\n正文段落。\n"
+    out = tmp_path / "missing_chart.docx"
+    markdown_to_docx(md, out, image_dir=tmp_path)
+
+    from docx import Document
+
+    doc = Document(str(out))
+    assert len(doc.inline_shapes) == 0
+    joined = "\n".join(p.text for p in doc.paragraphs)
+    assert "报告" in joined
+    assert "正文段落" in joined
+
+
 def test_docx_renders_tables_and_headings(tmp_path):
     md = "# 报告\n\n## 统计检验\n\n| 检验 | p |\n| --- | --- |\n| t-test | 0.01 |\n\n- 发现一\n- 发现二\n"
     out = tmp_path / "mini.docx"

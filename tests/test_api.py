@@ -34,6 +34,15 @@ async def test_upload_bad_csv(client):
     assert resp.status_code in (422, 500)
 
 
+async def test_upload_rejects_header_only_csv(client):
+    resp = await client.post(
+        "/datasets",
+        files={"file": ("header.csv", b"gender,city,income\n", "text/csv")},
+    )
+    assert resp.status_code == 422
+    assert "empty CSV" in resp.json()["detail"]
+
+
 async def _upload_and_analyze_income(client, monkeypatch, tmp_path):
     from agent.config import settings
 
