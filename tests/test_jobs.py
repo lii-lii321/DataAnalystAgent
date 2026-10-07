@@ -202,3 +202,37 @@ async def test_job_retention_prunes_stale_entries(client, tmp_path, monkeypatch)
 async def test_docx_export_missing_analysis_404(client):
     resp = await client.get("/datasets/abc/analyses/xyz/report.docx")
     assert resp.status_code == 404
+
+
+async def test_job_retention_never_prunes_running_jobs(client, tmp_path, monkeypatch):
+    from api import jobs as jobs_mod
+
+    monkeypatch.setattr(jobs_mod, "MAX_JOBS", 2)
+    jobs_mod.JOBS.clear()
+    jobs_mod.JOBS["runningold001"] = {"status": "running", "created_at": time.time() - 1000}
+    jobs_mod.JOBS["olddone00001"] = {"status": "done", "created_at": time.time() - 500}
+
+    upload = await client.post("/datasets", files={"file": ("small.csv", CSV.encode(), "text/csv")})
+    dataset_id = upload.json()["id"]
+    started = await client.post(
+        f"/datasets/{dataset_id}/analyze/async",
+        json={"question": "男性和女性的 income 是否存在显著差异？"},
+    )
+    assert started.status_code == 202
+    job_id = started.json()["job_id"]
+
+    assert "runningold001" in jobs_mod.JOBS
+    assert "olddone00001" not in jobs_mod.JOBS
+    assert job_id in jobs_mod.JOBS
+    assert (await client.get("/jobs/runningold001")).status_code == 200
+
+    payload = None
+    for _ in range(100):
+        resp = await client.get(f"/jobs/{job_id}")
+        payload = resp.json()
+        if payload["status"] != "running":
+            break
+        await asyncio.sleep(0.05)
+    assert payload["status"] == "done", payload
+    assert "runningold001" in jobs_mod.JOBS
+    jobs_mod.JOBS.clear()

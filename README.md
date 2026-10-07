@@ -149,7 +149,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             70 tests
+tests/             71 tests
 ```
 
 ## Testing
@@ -173,5 +173,6 @@ tests/             70 tests
 - [x] SQL import `limit` bounded (`1..100000`, bound as a query parameter)
 - [x] Job listing (`GET /jobs` — summaries oldest first, jobs tagged with `dataset_id`)
 - [x] Raw Markdown report download (`report.md`), analysis detail carries `created_at`
+- [x] Job retention never evicts running jobs (prune skips `status=running`)
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)

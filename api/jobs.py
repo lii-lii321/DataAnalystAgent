@@ -13,8 +13,12 @@ MAX_JOBS = 200
 def _prune_jobs() -> None:
     if len(JOBS) <= MAX_JOBS:
         return
-    ordered = sorted(JOBS.items(), key=lambda kv: kv[1].get("created_at", 0.0))
-    for job_id, _ in ordered[: len(JOBS) - MAX_JOBS]:
+    evictable = sorted(
+        ((job_id, job) for job_id, job in JOBS.items() if job.get("status") != "running"),
+        key=lambda kv: kv[1].get("created_at", 0.0),
+    )
+    overflow = len(JOBS) - MAX_JOBS
+    for job_id, _ in evictable[:overflow]:
         JOBS.pop(job_id, None)
 
 
