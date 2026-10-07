@@ -13,14 +13,14 @@ def validate_table(table: str) -> str:
 
 
 def load_table(url: str, table: str, limit: int = 10000) -> pd.DataFrame:
-    """Read a whole table through SQLAlchemy. The identifier is strictly
-    whitelisted and quoted, so the composed statement carries no user text
-    beyond a validated name."""
+    """Read a table through SQLAlchemy. The identifier is strictly whitelisted
+    and quoted, and the row cap is bound as a parameter, so the composed
+    statement carries no user text beyond a validated name."""
     validate_table(table)
-    statement = f'SELECT * FROM "{table}" LIMIT {int(limit)}'
+    statement = f'SELECT * FROM "{table}" LIMIT :row_limit'
     engine = create_engine(url)
     try:
         with engine.connect() as conn:
-            return pd.read_sql(text(statement), conn)
+            return pd.read_sql(text(statement), conn, params={"row_limit": max(1, int(limit))})
     finally:
         engine.dispose()

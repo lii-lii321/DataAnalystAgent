@@ -61,6 +61,26 @@ async def test_sql_bad_url_400(client):
     assert resp.status_code in (400, 422)
 
 
+async def test_sql_limit_boundary_validation(client, tmp_path):
+    url = _make_db(tmp_path)
+    for limit in (0, -5, 10**9):
+        resp = await client.post(
+            "/datasets/sql",
+            json={"url": url, "table": "students", "limit": limit},
+        )
+        assert resp.status_code == 422, limit
+
+
+async def test_sql_limit_caps_rows(client, tmp_path):
+    url = _make_db(tmp_path)
+    resp = await client.post(
+        "/datasets/sql",
+        json={"url": url, "table": "students", "limit": 5},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["profile"]["n_rows"] == 5
+
+
 def test_sql_remote_dialect_drivers_available():
     from sqlalchemy import create_engine
 

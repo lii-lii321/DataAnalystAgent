@@ -122,7 +122,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             64 tests
+tests/             66 tests
 ```
 
 ## Testing
@@ -143,5 +143,6 @@ tests/             64 tests
 - [x] Listing endpoints (`GET /datasets`, `GET /datasets/{id}/analyses` — analysis history, oldest first)
 - [x] Dataset deletion (`DELETE /datasets/{id}` — frees registry entry and artifacts directory)
 - [x] Data preview (`GET /datasets/{id}/data?rows=N` — raw rows, JSON-safe nulls)
+- [x] SQL import `limit` bounded (`1..100000`, bound as a query parameter)
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agent import docx_export
 from agent.agent import run_analysis_sync
@@ -55,7 +55,7 @@ class AnalyzeRequest(BaseModel):
 class SqlSourceRequest(BaseModel):
     url: str
     table: str
-    limit: int = 10000
+    limit: int = Field(default=10000, ge=1, le=100_000)
 
 
 def _profile_payload(profile) -> dict:
