@@ -1,9 +1,11 @@
 import asyncio
 import io
+import math
 import re
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -29,6 +31,21 @@ from api.store import (
 router = APIRouter()
 
 CHART_FILENAME_RE = re.compile(r"^chart_\d+_[\w\-]+\.png$")
+PREVIEW_MAX_ROWS = 500
+
+
+def _json_safe(value):
+    if value is None or value is pd.NA or value is pd.NaT:
+        return None
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, (np.floating, float)):
+        return float(value) if math.isfinite(value) else None
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    return value
 
 
 class AnalyzeRequest(BaseModel):
@@ -128,6 +145,25 @@ async def remove_dataset(dataset_id: str):
         if artifacts.parent == base_dir.resolve():
             shutil.rmtree(artifacts, ignore_errors=True)
     return {"deleted": dataset_id}
+
+
+@router.get("/datasets/{dataset_id}/data")
+async def preview_dataset(dataset_id: str, rows: int = 20):
+    record = get_dataset(dataset_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="dataset not found")
+    rows = max(1, min(rows, PREVIEW_MAX_ROWS))
+    head = record.df.head(rows)
+    columns = [str(col) for col in head.columns]
+    data = [[_json_safe(value) for value in row] for row in head.itertuples(index=False, name=None)]
+    return {
+        "id": record.id,
+        "filename": record.filename,
+        "n_rows": record.profile.n_rows,
+        "n_cols": record.profile.n_cols,
+        "columns": columns,
+        "rows": data,
+    }
 
 
 @router.get("/datasets/{dataset_id}/analyses")

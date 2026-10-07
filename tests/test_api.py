@@ -4,6 +4,7 @@ from api.store import REGISTRY
 from agent.synth import make_income
 
 CSV_TEXT = "gender,city,income\nM,tier1,9000\nF,tier2,7000\nM,tier1,12000\nF,tier3,6500\n"
+CSV_TEXT_NAN = "a,b\n1,x\n2,\n3,y\n"
 
 
 @pytest.fixture(autouse=True)
@@ -200,6 +201,44 @@ async def test_delete_dataset_removes_artifacts(client, tmp_path, monkeypatch):
     assert not (tmp_path / dataset_id).exists()
     assert (await client.get(f"/datasets/{dataset_id}/charts/{chart}")).status_code == 404
     assert (await client.get(f"/datasets/{dataset_id}/analyses")).status_code == 404
+
+
+async def test_preview_dataset_rows(client):
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("income.csv", CSV_TEXT.encode(), "text/csv")},
+    )
+    dataset_id = upload.json()["id"]
+
+    resp = await client.get(f"/datasets/{dataset_id}/data", params={"rows": 2})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == dataset_id
+    assert body["n_rows"] == 4
+    assert body["columns"] == ["gender", "city", "income"]
+    assert body["rows"] == [["M", "tier1", 9000], ["F", "tier2", 7000]]
+
+    full = (await client.get(f"/datasets/{dataset_id}/data", params={"rows": 999})).json()
+    assert len(full["rows"]) == 4
+
+    default = (await client.get(f"/datasets/{dataset_id}/data")).json()
+    assert len(default["rows"]) == 4
+
+
+async def test_preview_dataset_renders_missing_as_null(client):
+    upload = await client.post(
+        "/datasets",
+        files={"file": ("nan.csv", CSV_TEXT_NAN.encode(), "text/csv")},
+    )
+    dataset_id = upload.json()["id"]
+
+    body = (await client.get(f"/datasets/{dataset_id}/data")).json()
+    assert body["rows"][1] == [2, None]
+
+
+async def test_preview_missing_dataset_404(client):
+    resp = await client.get("/datasets/doesnotexist/data")
+    assert resp.status_code == 404
 
 
 async def test_healthz(client):

@@ -76,6 +76,9 @@ curl -O -J http://127.0.0.1:8001/datasets/<id>/charts/<chart_file>.png
 curl http://127.0.0.1:8001/datasets
 curl http://127.0.0.1:8001/datasets/<id>/analyses
 
+# peek at the raw rows (default 20, capped at 500)
+curl "http://127.0.0.1:8001/datasets/<id>/data?rows=10"
+
 # release a dataset: drops the in-memory record and its artifacts directory
 curl -X DELETE http://127.0.0.1:8001/datasets/<id>
 
@@ -119,7 +122,7 @@ agent/
 └── llm.py         mock | OpenAI-compatible provider
 api/               FastAPI: upload → profile → analyze → charts → report
 benchmarks/        tasks.jsonl + runner
-tests/             61 tests
+tests/             64 tests
 ```
 
 ## Testing
@@ -139,5 +142,6 @@ tests/             61 tests
 - [x] Chart download endpoint (`/datasets/{id}/charts/{filename}`), hardened job lifecycle
 - [x] Listing endpoints (`GET /datasets`, `GET /datasets/{id}/analyses` — analysis history, oldest first)
 - [x] Dataset deletion (`DELETE /datasets/{id}` — frees registry entry and artifacts directory)
+- [x] Data preview (`GET /datasets/{id}/data?rows=N` — raw rows, JSON-safe nulls)
 - [ ] Human-in-the-loop hypothesis refinement
 - [ ] PDF export (CJK font packaging)
